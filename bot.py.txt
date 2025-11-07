@@ -1,0 +1,124 @@
+from telethon import functions, types
+import asyncio
+from telethon import TelegramClient, events
+from telethon.sessions import StringSession
+
+api_id = 25623676
+api_hash = "bd5368928a71f26feb86c63bbc24a6c8"
+string_session = "1BJWap1wBuxA2IwXxUQw-ltteUZIXWH_9VnJEJEI6UdyQaA-K7iP9iJt8gwKzfMFMgTrfEBIA1vU_M17N1w4JcKO4NqMA94rorjQDoc4Ec1u0HlPYZcf6CTjT9CZZEZba4Dq1q_gxIY8kT0dF3Q7Z6qRXpcHqplQtmsQfPKyLoPW8eJndDVqnfXVeLvTGq4X_-1scqTx-uPYNYK_Qo7NvqRQ7qo0lslUI7I_PJeL7EKV3m8mdAm1Nw6hBzl5Gg3sVLYF8rjZlEzsXpXjqhTPYAqeD5tgn5LUKBg5wJyFyr0ptFqwiyyj74vAqya57Cp8tHECiSZBml-WM9CyAapG9VIYk6Fn5Xaw="
+OWNER_ID = 7921683305
+
+client = TelegramClient(StringSession(string_session), api_id, api_hash)
+
+ACTIVE = False
+
+@client.on(events.NewMessage)
+async def main_handler(event):
+    global ACTIVE
+
+    if event.sender_id == OWNER_ID:
+
+
+            
+        text = event.raw_text or ""
+        clean = text.replace(" ", "").replace("‌", "").replace("\u200c","")
+
+        # ───────────── تنظیم دوست با نام دلخواه ─────────────
+        if event.raw_text.startswith("تنظیم دوست") and event.is_reply:
+            try:
+                parts = event.raw_text.split(" ", 2)
+                if len(parts) < 3:
+                    await event.reply("❌ اسم دوست را بنویس\nمثال:\nتنظیم دوست علی")
+                    return
+
+                name = parts[2]
+                msg = await event.get_reply_message()
+                uid = msg.sender_id
+
+                await client(functions.contacts.AddContactRequest(
+                    id=uid,
+                    first_name=name,
+                    last_name="",
+                    phone=""
+                ))
+                await event.reply(f"✅ با نام {name} ذخیره شد", parse_mode="md")
+            except Exception as e:
+                await event.reply(f"❌ خطا: {e}")
+            return
+
+        # ───────────── حذف دوست ─────────────
+        if event.raw_text == "حذف دوست" and event.is_reply:
+            try:
+                msg = await event.get_reply_message()
+                uid = msg.sender_id
+
+                await client(functions.contacts.DeleteContactsRequest(id=[uid]))
+                await event.reply("✅ از مخاطبین حذف شد")
+            except Exception as e:
+                await event.reply(f"❌ خطا: {e}")
+            return
+
+        # ───────────── تنظیم دشمن (بلاک) ─────────────
+        if event.raw_text == "تنظیم دشمن" and event.is_reply:
+            try:
+                msg = await event.get_reply_message()
+                uid = msg.sender_id
+
+                await client(functions.contacts.BlockRequest(id=uid))
+                await event.reply("⛔ بلاک شد (دشمن تنظیم شد)")
+            except Exception as e:
+                await event.reply(f"❌ خطا: {e}")
+            return
+
+        # ───────────── حذف دشمن (آن‌بلاک) ─────────────
+        if event.raw_text == "حذف دشمن" and event.is_reply:
+            try:
+                msg = await event.get_reply_message()
+                uid = msg.sender_id
+
+                await client(functions.contacts.UnblockRequest(id=uid))
+                await event.reply("✅ آن‌بلاک شد (دشمن حذف شد)")
+            except Exception as e:
+                await event.reply(f"❌ خطا: {e}")
+            return
+        if "سلفروشن" in clean:
+            ACTIVE = True
+            await event.reply("✅ **سلف‌بات فعال شد**", parse_mode="md")
+            return
+
+        if "سلفخاموش" in clean:
+            ACTIVE = False
+            await event.reply("⛔ **سلف‌بات غیرفعال شد**", parse_mode="md")
+            return
+
+        parts = event.raw_text.split(" ", 2)
+        if len(parts) == 3 and parts[0] == "اسپم":
+            try:
+                count = int(parts[1])
+                text = parts[2]
+                for _ in range(count):
+                    await client.send_message(event.chat_id, text)
+                    await asyncio.sleep(0.00000000000001)
+            except:
+                pass
+            return
+
+
+            
+    if ACTIVE and event.media:
+        try:
+            f = await event.message.download_media()
+            await client.send_file("me", f)
+        except:
+            try:
+                await client.forward_messages("me", event.message)
+            except:
+                pass
+
+async def runner():
+    await client.start()
+    print("SelfBot Started...")
+    await client.run_until_disconnected()
+
+with client:
+    client.loop.run_until_complete(runner())
